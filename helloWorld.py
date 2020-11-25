@@ -28,7 +28,15 @@ def FindName(newFilename,originalFilename,i):
             return FindName(newFilename,originalFilename,i)
     return newFilename + ".mp3"
 
-def ProcessAudio(inputFilename,path,outputFilename,pitchFactor=1,speedFactor=1):
+# Convert volume to a valid input for integrated loudness [-70, -5]
+def volumeConverter(volume):
+    volumeFactor = volume - 55
+    if volume > 50 or volume <= 0:
+        return -1
+    else:
+        return volumeFactor
+
+def ProcessAudio(inputFilename,path,outputFilename,pitchFactor=1,speedFactor=1,volume = 50):
     print("Processing: {}. Output file: {}".format(inputFilename,outputFilename+".mp3"))
     # Change output name if there are duplicates
     outputFilename = FindName(outputFilename,outputFilename,1)        
@@ -49,18 +57,28 @@ def ProcessAudio(inputFilename,path,outputFilename,pitchFactor=1,speedFactor=1):
         speedTempoOverhead = speedTempoOverhead/0.5
     speedProcessString = speedProcessString + ",atempo={}".format(speedTempoOverhead)
 
+    # Generate volumeChangingString
+    if(volumeConverter(volume) == -1):
+        print("Please check your volume in the correct range [1, 50]")
+        exit(1)
+    else:
+        volumeChangingString = (",loudnorm=I={}:LRA=10:TP=-1.5".format(volumeConverter(volume)))
+
     # Process
-    print(" ffmpeg -y -i {} -af {}{} out.mp3".format(inputFilename,pitchProcessString,speedProcessString))
-    os.system(" ffmpeg -y -i {} -af {}{} out.mp3".format(inputFilename,pitchProcessString,speedProcessString))
+    print(" ffmpeg -y -i {} -af {}{}{} out.mp3".format(inputFilename,pitchProcessString,speedProcessString, volumeChangingString))
+    os.system(" ffmpeg -y -i {} -af {}{}{} out.mp3".format(inputFilename,pitchProcessString,speedProcessString, volumeChangingString))
     os.startfile("out.mp3")
 
 # Execute the script
-path = "D:\\Ffmpeg\\ffmpeg\\bin"
+path = "D:\\Ffmpeg\\ffmpeg\\bin" # Please change the executing path for each time of running
 inputFilename = "in.mp3"
 outputFilename = "out"
-pitchFactor = 2
-speedFactor =4
-if (len(sys.argv)==3):
+pitchFactor = 1.7
+speedFactor = 2
+volume = 30
+print("Please enter a volume in the range [1, 50]")
+if (len(sys.argv)==4):
     pitchFactor = float(sys.argv[1])
-    speedFactor = float(sys.argv[2]) 
-ProcessAudio(inputFilename,path,outputFilename,pitchFactor,speedFactor)
+    speedFactor = float(sys.argv[2])
+    volume = int(sys.argv[3])
+ProcessAudio(inputFilename,path,outputFilename,pitchFactor,speedFactor,volume)
